@@ -4,7 +4,7 @@
       "accounts.GetUserInfoById",
       "accounts.StartUploadAvatar",
       "accounts.CompleteUploadAvatar",
-      "accounts.EmailTokenGeneration"
+      "accounts.EmailTokenGeneration",
     ],
     "Discussions": [
       "discussions.CloseDiscussion",

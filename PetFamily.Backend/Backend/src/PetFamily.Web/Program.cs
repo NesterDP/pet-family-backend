@@ -56,10 +56,37 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// app.UseCors("AllowAll");
+
+app.UseCors(
+    config =>
+    {
+         config.WithOrigins("http://localhost:5173")
+            .AllowCredentials()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+        // config.AllowAnyOrigin()
+        //    .AllowCredentials()
+        //    .AllowAnyHeader()
+        //    .AllowAnyMethod();
+
+    });
+
 app.UseAuthentication();
 app.UseAuthorization();
 
+
 app.MapControllers();
+
+
+app.MapGet(
+    "api/users", () =>
+    {
+        List<string> users = ["user1", "user2", "user3"];
+
+        // return Results.BadRequest("Все плохо");
+        return Results.Ok(users);
+    });
 
 app.Run();
 

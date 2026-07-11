@@ -3,6 +3,7 @@ using PetFamily.Accounts.Application.Commands.CompleteUploadAvatar;
 using PetFamily.Accounts.Application.Commands.ConfirmEmail;
 using PetFamily.Accounts.Application.Commands.GenerateEmailToken;
 using PetFamily.Accounts.Application.Commands.Login;
+using PetFamily.Accounts.Application.Commands.Logout;
 using PetFamily.Accounts.Application.Commands.RefreshTokens;
 using PetFamily.Accounts.Application.Commands.Register;
 using PetFamily.Accounts.Application.Commands.StartUploadAvatar;
@@ -11,6 +12,7 @@ using PetFamily.Accounts.Contracts.Requests;
 using PetFamily.Accounts.Presentation.Accounts.Requests;
 using PetFamily.Framework;
 using PetFamily.Framework.Security.Authorization;
+using PetFamily.SharedKernel.CustomErrors;
 
 namespace PetFamily.Accounts.Presentation.Accounts;
 
@@ -21,6 +23,14 @@ public class AccountsController : ApplicationController
     public AccountsController(UserScopedData userData)
     {
         _userData = userData;
+    }
+
+    [Permission("accounts.GetUserInfoById")]
+    [HttpPost("test")]
+    public async Task<IActionResult> Test(
+        CancellationToken cancellationToken)
+    {
+        return Ok("test");
     }
 
     [Permission("accounts.GetUserInfoById")]
@@ -82,28 +92,42 @@ public class AccountsController : ApplicationController
 
         HttpContext.Response.Cookies.Append("refreshToken", result.Value.RefreshToken.ToString());
 
-        // return result.ToResponse();
-        return Ok(result.Value.AccessToken);
+        return result.ToResponse();
+    }
+
+    [HttpPost("logout")]
+
+    public async Task<IActionResult> Logout(
+        [FromServices] LogoutUserHandler handler)
+    {
+        var refreshTokenCookie = HttpContext.Request.Cookies["refreshToken"];
+        if (!Guid.TryParse(refreshTokenCookie, out var refreshToken))
+            return Errors.General.Failure("refreshToken has invalid format").ToResponse();
+
+        var command = new LogoutUserCommand(refreshToken);
+        var result = await handler.HandleAsync(command, CancellationToken.None);
+
+        HttpContext.Response.Cookies.Delete("refreshToken");
+        return result.ToResponse();
     }
 
     [HttpPost("refresh")]
     public async Task<IActionResult> RefreshTokens(
-        [FromBody] RefreshTokenRequest request,
         [FromServices] RefreshTokensHandler handler,
         CancellationToken cancellationToken)
     {
-        var command = new RefreshTokensCommand(request.AccessToken, request.RefreshToken);
+        if (!HttpContext.Request.Cookies.TryGetValue("refreshToken", out var requestRefreshToken))
+        {
+            return Unauthorized();
+        }
+
+        var command = new RefreshTokensCommand(Guid.Parse(requestRefreshToken));
         var result = await handler.HandleAsync(command, cancellationToken);
         if (result.IsFailure)
             return result.Error.ToResponse();
 
         HttpContext.Response.Cookies.Append("refreshToken", result.Value.RefreshToken.ToString());
-
-        // HttpContext.Response.Cookies.Append("accessToken", result.Value.AccessToken);
-        // return result.ToResponse();
-
-        // return Ok();
-        return Ok(result.Value.AccessToken);
+        return result.ToResponse();
     }
 
     [Permission("accounts.StartUploadAvatar")]

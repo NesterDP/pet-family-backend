@@ -34,7 +34,7 @@ public class RefreshTokensHandlerTests : AccountsTestsBase
         var accessToken = await TokenProvider.GenerateAccessToken(user, CancellationToken.None);
         var refreshToken = await TokenProvider.GenerateRefreshToken(user, accessToken.Jti, CancellationToken.None);
 
-        var command = new RefreshTokensCommand(accessToken.AccessToken, refreshToken);
+        var command = new RefreshTokensCommand(refreshToken);
 
         // act
         var result = await _sut.HandleAsync(command, CancellationToken.None);
@@ -79,28 +79,7 @@ public class RefreshTokensHandlerTests : AccountsTestsBase
 
         await Task.Delay(SECONDS_BEFORE_EXPIRATION);
 
-        var command = new RefreshTokensCommand(accessToken.AccessToken, refreshToken);
-
-        // act
-        var result = await _sut.HandleAsync(command, CancellationToken.None);
-
-        // assert
-        result.IsFailure.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task RefreshTokens_failure_should_return_error_because_jti_doesnt_match()
-    {
-        // arrange
-        const string EMAIL = "test@mail.com";
-        const string USERNAME = "testUserName";
-        const string PASSWORD = "Password121314s.";
-
-        var user = await DataGenerator.SeedUserAsync(USERNAME, EMAIL, PASSWORD, UserManager, RoleManager);
-        var accessToken = await TokenProvider.GenerateAccessToken(user, CancellationToken.None);
-        var refreshToken = await TokenProvider.GenerateRefreshToken(user, Guid.NewGuid(), CancellationToken.None);
-
-        var command = new RefreshTokensCommand(accessToken.AccessToken, refreshToken);
+        var command = new RefreshTokensCommand(refreshToken);
 
         // act
         var result = await _sut.HandleAsync(command, CancellationToken.None);
